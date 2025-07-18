@@ -74,16 +74,14 @@ jobs:
         
       - name: Run Automated Remediation Script (Python)
         id: remediation_script_execution
-        # Pass all relevant JSON reports to the script
-        run: |
-          python ../.github/scripts/remediate_pipeline_poc.py \
-            --go-report trivy-go-initial.json \
-            --dockerfile-report trivy-dockerfile-initial.json \
-            --image-report trivy-image-initial.json # Pass image report to remediation script
-        working-directory: ./go-app-vulnerable/ # Run script from app context for easier pathing
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }} # Optional
+          GITHUB_TOKEN:     ${{ secrets.GITHUB_TOKEN }}
+          # SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          python "$GITHUB_WORKSPACE/.github/scripts/remediate_pipeline_poc.py" \
+            --go-report   "$GITHUB_WORKSPACE/go-app-vulnerable/trivy-go-initial.json" \
+            --dockerfile-report "$GITHUB_WORKSPACE/go-app-vulnerable/trivy-dockerfile-initial.json" \
+            --image-report      "$GITHUB_WORKSPACE/go-app-vulnerable/trivy-image-initial.json"
         continue-on-error: true
 
       - name: Check for changes and Create Pull Request
@@ -91,27 +89,24 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Go back to root directory to check git status for the whole repo
-          cd ..
           git_status=$(git status --porcelain)
           if [ -z "$git_status" ]; then
             echo "::notice::No changes detected after remediation. No PR needed."
             echo "changes_made=false" >> $GITHUB_OUTPUT
           else
-            echo "::notice::Changes detected. Creating PR..."
-            CURRENT_BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" # Get current branch name
+            echo "::notice::Changes detected. Creating PR…"
+            CURRENT_BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
             REMEDIATION_BRANCH="autofix/vuln-$(date +%Y%m%d%H%M%S)-${CURRENT_BRANCH}"
-            
+
             git config user.name "GitHub Actions Automation"
             git config user.email "actions@github.com"
-            
+
             git checkout -b "$REMEDIATION_BRANCH"
             git add .
             git commit -m "chore(security): Automated vulnerability remediation by Trivy-PoC"
             git push origin "$REMEDIATION_BRANCH"
 
             PR_BODY_SUMMARY=$(cat .github/autofix_summary_poc.txt || echo "Automated vulnerability remediation completed.")
-
             PR_URL=$(gh pr create \
               --base "$CURRENT_BRANCH" \
               --head "$REMEDIATION_BRANCH" \
@@ -121,8 +116,8 @@ jobs:
               --reviewer ${{ github.actor }} 
             )
             echo "::notice::Pull request created: $PR_URL"
-            echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
-            echo "changes_made=true" >> $GITHUB_OUTPUT
+            echo "pr_url=$PR_URL"      >> $GITHUB_OUTPUT
+            echo "changes_made=true"  >> $GITHUB_OUTPUT
           fi
         continue-on-error: true
 
