@@ -1,5 +1,8 @@
 name: PoC Automated Vulnerability Remediation
-
+permissions:
+  contents: write         # to push branches/commits
+  security-events: write  # to upload SARIF
+  actions: read  
 on:
   workflow_dispatch: # Allows manual trigger
   push:
@@ -10,10 +13,6 @@ on:
 jobs:
   trivy_scan_and_fix:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write # Required to create branches and push commits
-      pull-requests: write # Required to create pull requests
-      security-events: write # Required to upload SARIF results
 
     steps:
       - name: Checkout repository
