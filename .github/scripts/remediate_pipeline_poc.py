@@ -9,14 +9,13 @@ logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 COMPONENT_DIR = "go-app-vulnerable"
 
-
 def load_report(path):
     try:
-        return json.load(open(path, "r"))
+        with open(path, "r") as f:
+            return json.load(f)
     except Exception as e:
         logging.error(f"Failed to load {path}: {e}")
         return {"Results": []}
-
 
 def collect_vulns(report):
     vs = []
@@ -24,7 +23,6 @@ def collect_vulns(report):
         vs.extend(r.get("Vulnerabilities", []))
         vs.extend(r.get("Misconfigurations", []))
     return vs
-
 
 def remediate_go_mod(vulns):
     root = COMPONENT_DIR
@@ -42,17 +40,20 @@ def remediate_go_mod(vulns):
         pkg = v.get("PkgName")
         ver = v.get("FixedVersion")
         if pkg and ver:
-            logging.info(f"→ go get {pkg}@{ver}")
+            logging.info(f"→ Attempting to fix: {pkg} → {ver}")
             try:
-                subprocess.run(["go", "get", f"{pkg}@{ver}"],
-                               cwd=root, check=True)
+                subprocess.run(["go", "get", f"{pkg}@{ver}"], cwd=root, check=True)
                 did_fix = True
             except subprocess.CalledProcessError as e:
-                logging.error(f"Failed to update {pkg}: {e}")
+                logging.error(f"✗ Failed to update {pkg}: {e}")
+        else:
+            logging.warning(f"✗ Skipping {pkg}: No FixedVersion available.")
 
     if did_fix:
         subprocess.run(["go", "mod", "tidy"], cwd=root)
-
+        logging.info("✓ go.mod updated and tidied.")
+    else:
+        logging.info("→ No go.mod fixes applied.")
 
 def remediate_dockerfile(vulns):
     root = COMPONENT_DIR
@@ -66,11 +67,10 @@ def remediate_dockerfile(vulns):
     lines = open(df, "r").readlines()
     modified = False
 
-    # If any DS001 findings, insert non-root user
     if any(v.get("ID") == "DS001" for v in vulns):
         if not any("adduser" in l or "useradd" in l for l in lines):
             idx = next(
-                (i for i,l in enumerate(lines)
+                (i for i, l in enumerate(lines)
                  if l.strip().upper().startswith(("CMD ", "ENTRYPOINT "))),
                 len(lines)-1
             )
@@ -80,9 +80,11 @@ def remediate_dockerfile(vulns):
         modified = True
 
     if modified:
-        open(df, "w").writelines(lines)
-        logging.info("→ Dockerfile updated with non‑root user.")
-
+        with open(df, "w") as f:
+            f.writelines(lines)
+        logging.info("✓ Dockerfile updated with non‑root user.")
+    else:
+        logging.info("→ No Dockerfile changes needed.")
 
 def main(go_report, dockerfile_report, image_report):
     go_data = load_report(go_report)
@@ -100,11 +102,10 @@ def main(go_report, dockerfile_report, image_report):
 
     logging.info("\n--- PoC Remediation Complete ---")
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Trivy Remediation (hard‑coded path)")
-    parser.add_argument("--go-report",        required=True)
-    parser.add_argument("--dockerfile-report",required=True)
-    parser.add_argument("--image-report",     required=True)
+    parser.add_argument("--go-report", required=True)
+    parser.add_argument("--dockerfile-report", required=True)
+    parser.add_argument("--image-report", required=True)
     args = parser.parse_args()
     main(args.go_report, args.dockerfile_report, args.image_report)
