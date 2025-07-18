@@ -2,58 +2,37 @@ import json
 import os
 import logging
 import argparse
-from collections import defaultdict
 import subprocess
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(message)s')
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+
+COMPONENT_DIR = "go-app-vulnerable"
+
 
 def load_report(path):
     try:
-        with open(path, 'r') as f:
-            return json.load(f)
+        return json.load(open(path, "r"))
     except Exception as e:
         logging.error(f"Failed to load {path}: {e}")
         return {"Results": []}
 
-def group_vulnerabilities_by_component(report):
-    """
-    - If this report has any Results whose Target endswith go.mod,
-      collect *all* vulns/misconfigs into the go-mod directory.
-    - Else if any Target endswith Dockerfile, collect *all* into that
-      Dockerfile directory.
-    - Otherwise (image scan), lump into '.'.
-    """
-    results = report.get("Results", [])
-    all_items = []
-    for r in results:
-        all_items.extend(r.get("Vulnerabilities", []) + r.get("Misconfigurations", []))
 
-    # 1) Go-mod scan?
-    for r in results:
-        tgt = r.get("Target", "")
-        if tgt.endswith("go.mod"):
-            comp = os.path.dirname(tgt) or "."
-            comp = os.path.relpath(comp, os.getcwd())
-            return { comp: all_items }
-
-    # 2) Dockerfile scan?
-    for r in results:
-        tgt = r.get("Target", "")
-        if tgt.endswith("Dockerfile"):
-            comp = os.path.dirname(tgt) or "."
-            comp = os.path.relpath(comp, os.getcwd())
-            return { comp: all_items }
-
-    # 3) Everything else → image scan
-    return { ".": all_items }
+def collect_vulns(report):
+    vs = []
+    for r in report.get("Results", []):
+        vs.extend(r.get("Vulnerabilities", []))
+        vs.extend(r.get("Misconfigurations", []))
+    return vs
 
 
-def remediate_go_mod(component_root, vulns):
-    logging.info(f"\n[Go Module Remediation] Component: {component_root}")
-    go_mod = os.path.join(component_root, "go.mod")
+def remediate_go_mod(vulns):
+    root = COMPONENT_DIR
+    go_mod = os.path.join(root, "go.mod")
+    logging.info(f"\n[Go Module Remediation] Component: {root}")
+
     if not os.path.exists(go_mod):
-        logging.warning(f"go.mod not found in {component_root}")
+        logging.warning(f"go.mod not found at {go_mod}")
         return
 
     did_fix = False
@@ -61,79 +40,71 @@ def remediate_go_mod(component_root, vulns):
         if v.get("Type", "").lower() != "gomod":
             continue
         pkg = v.get("PkgName")
-        fixed = v.get("FixedVersion")
-        if pkg and fixed:
-            logging.info(f"→ Upgrading {pkg} to {fixed}")
+        ver = v.get("FixedVersion")
+        if pkg and ver:
+            logging.info(f"→ go get {pkg}@{ver}")
             try:
-                subprocess.run(["go", "get", f"{pkg}@{fixed}"],
-                               cwd=component_root, check=True)
+                subprocess.run(["go", "get", f"{pkg}@{ver}"],
+                               cwd=root, check=True)
                 did_fix = True
             except subprocess.CalledProcessError as e:
-                logging.error(f"Failed to go get {pkg}@{fixed}: {e}")
+                logging.error(f"Failed to update {pkg}: {e}")
 
     if did_fix:
-        subprocess.run(["go", "mod", "tidy"], cwd=component_root, check=False)
+        subprocess.run(["go", "mod", "tidy"], cwd=root)
 
 
-def remediate_dockerfile(component_root, vulns):
-    logging.info(f"\n[Dockerfile Remediation] Component: {component_root}")
-    df = os.path.join(component_root, "Dockerfile")
+def remediate_dockerfile(vulns):
+    root = COMPONENT_DIR
+    df = os.path.join(root, "Dockerfile")
+    logging.info(f"\n[Dockerfile Remediation] Component: {root}")
+
     if not os.path.exists(df):
-        logging.warning(f"Dockerfile not found in {component_root}")
+        logging.warning(f"Dockerfile not found at {df}")
         return
 
-    with open(df, "r") as f:
-        lines = f.readlines()
-
+    lines = open(df, "r").readlines()
     modified = False
-    # Trivy’s DS001 = “container runs as root”
+
+    # If any DS001 findings, insert non-root user
     if any(v.get("ID") == "DS001" for v in vulns):
-        # ensure we add a non-root user
         if not any("adduser" in l or "useradd" in l for l in lines):
-            # insert before any CMD/ENTRYPOINT or at end
-            idx = next((i for i,l in enumerate(lines)
-                        if l.strip().upper().startswith(("CMD ", "ENTRYPOINT "))),
-                       len(lines)-1)
+            idx = next(
+                (i for i,l in enumerate(lines)
+                 if l.strip().upper().startswith(("CMD ", "ENTRYPOINT "))),
+                len(lines)-1
+            )
             lines.insert(idx, "RUN adduser -D appuser\n")
         if not any(l.strip().upper().startswith("USER ") for l in lines):
             lines.append("USER appuser\n")
         modified = True
 
     if modified:
-        with open(df, "w") as f:
-            f.writelines(lines)
-        logging.info("→ Dockerfile updated with a non‑root user.")
+        open(df, "w").writelines(lines)
+        logging.info("→ Dockerfile updated with non‑root user.")
 
 
 def main(go_report, dockerfile_report, image_report):
-    reports = [
-        (load_report(go_report)),
-        (load_report(dockerfile_report)),
-        (load_report(image_report)),
-    ]
+    go_data = load_report(go_report)
+    df_data = load_report(dockerfile_report)
 
-    # Merge them all into a single map: { component_root: [vuln, ...] }
-    merged = defaultdict(list)
-    for rep in reports:
-        for comp, vs in group_vulnerabilities_by_component(rep).items():
-            merged[comp].extend(vs)
+    go_vulns = collect_vulns(go_data)
+    df_vulns = collect_vulns(df_data)
 
-    if not merged:
-        logging.info("No vulnerabilities found to remediate.")
-        return
+    logging.info(f"\nProcessing component: {COMPONENT_DIR}")
+    logging.info(f"  Go‑mod issues:     {len(go_vulns)}")
+    logging.info(f"  Dockerfile issues: {len(df_vulns)}")
 
-    for comp, vs in merged.items():
-        logging.info(f"\nProcessing component: {comp} ({len(vs)} issues)")
-        remediate_go_mod(comp, vs)
-        remediate_dockerfile(comp, vs)
+    remediate_go_mod(go_vulns)
+    remediate_dockerfile(df_vulns)
 
     logging.info("\n--- PoC Remediation Complete ---")
 
 
 if __name__ == "__main__":
-    p = argparse.ArgumentParser("Trivy Remediation Script")
-    p.add_argument("--go-report",        required=True)
-    p.add_argument("--dockerfile-report",required=True)
-    p.add_argument("--image-report",     required=True)
-    args = p.parse_args()
+    parser = argparse.ArgumentParser("Trivy Remediation (hard‑coded path)")
+    parser.add_argument("--go-report",        required=True)
+    parser.add_argument("--dockerfile-report",required=True)
+    parser.add_argument("--image-report",     required=True)
+    args = parser.parse_args()
     main(args.go_report, args.dockerfile_report, args.image_report)
