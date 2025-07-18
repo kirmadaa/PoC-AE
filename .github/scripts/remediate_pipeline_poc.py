@@ -1,130 +1,177 @@
 import json
-import os
-import logging
 import argparse
+import os
+import re
 import subprocess
+from collections import defaultdict
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format="%(message)s")
+def parse_args():
+    parser = argparse.ArgumentParser(description='Automated Vulnerability Remediation')
+    parser.add_argument('--go-report', help='Trivy filesystem scan report')
+    parser.add_argument('--docker-report', help='Trivy Dockerfile scan report')
+    parser.add_argument('--image-report', help='Trivy container image scan report')
+    return parser.parse_args()
 
-COMPONENT_DIR = "go-app-vulnerable"
-
-def load_report(path):
-    try:
-        with open(path, "r") as f:
-            return json.load(f)
-    except Exception as e:
-        logging.error(f"Failed to load {path}: {e}")
-        return {"Results": []}
-
-def collect_vulns(report):
-    vulns = []
-    for r in report.get("Results", []):
-        vulns.extend(r.get("Vulnerabilities", []))
-        vulns.extend(r.get("Misconfigurations", []))
-    return vulns
-
-def remediate_go_mod(vulns):
-    root = COMPONENT_DIR
-    go_mod = os.path.join(root, "go.mod")
-    logging.info(f"\n[Go Module Remediation] Component: {root}")
-
-    if not os.path.exists(go_mod):
-        logging.warning(f"go.mod not found at {go_mod}")
+def update_go_mod(vulns):
+    """Update go.mod with fixed package versions"""
+    if not os.path.exists('go.mod') or not vulns:
         return False
 
-    did_fix = False
-    for v in vulns:
-        if v.get("Type", "").lower() != "gomod":
-            continue
-        pkg = v.get("PkgName")
-        ver = v.get("FixedVersion")
-        if pkg and ver:
-            logging.info(f"→ Attempting to fix: {pkg} → {ver}")
-            try:
-                subprocess.run(["go", "get", f"{pkg}@{ver}"], cwd=root, check=True)
-                did_fix = True
-            except subprocess.CalledProcessError as e:
-                logging.error(f"✗ Failed to update {pkg}: {e}")
-        else:
-            logging.warning(f"✗ Skipping {pkg}: No FixedVersion available.")
+    updated = False
+    with open('go.mod', 'r') as f:
+        lines = f.readlines()
 
-    if did_fix:
-        subprocess.run(["go", "mod", "tidy"], cwd=root)
-        logging.info("✓ go.mod updated and tidied.")
-    else:
-        logging.info("→ No go.mod fixes applied.")
+    # Group fixes by package (keep highest fixed version)
+    fix_map = {}
+    for vuln in vulns:
+        pkg = vuln['PkgName']
+        fixed_ver = vuln.get('FixedVersion', '')
+        if fixed_ver and (pkg not in fix_map or fixed_ver > fix_map[pkg]):
+            fix_map[pkg] = fixed_ver
 
-    return did_fix
+    # Update require lines
+    for i, line in enumerate(lines):
+        if line.startswith('require'):
+            for pkg, fixed_ver in fix_map.items():
+                if pkg in line:
+                    # Preserve comment if exists
+                    if '//' in line:
+                        comment = line.split('//')[1]
+                        lines[i] = f"require {pkg} {fixed_ver} //{comment}"
+                    else:
+                        lines[i] = f"require {pkg} {fixed_ver}\n"
+                    updated = True
 
-def remediate_dockerfile(vulns):
-    root = COMPONENT_DIR
-    df = os.path.join(root, "Dockerfile")
-    logging.info(f"\n[Dockerfile Remediation] Component: {root}")
-
-    if not os.path.exists(df):
-        logging.warning(f"Dockerfile not found at {df}")
-        return False
-
-    lines = open(df, "r").readlines()
-    modified = False
-
-    # Match vulnerabilities that say "runs as root" or related
-    if any("run as root" in v.get("Title", "").lower() for v in vulns):
-        if not any("adduser" in l or "useradd" in l for l in lines):
-            idx = next(
-                (i for i, l in enumerate(lines)
-                 if l.strip().upper().startswith(("CMD", "ENTRYPOINT"))),
-                len(lines) - 1
-            )
-            lines.insert(idx, "RUN adduser -D appuser\n")
-        if not any(l.strip().upper().startswith("USER") for l in lines):
-            lines.append("USER appuser\n")
-        modified = True
-
-    if modified:
-        with open(df, "w") as f:
+    if updated:
+        with open('go.mod', 'w') as f:
             f.writelines(lines)
-        logging.info("✓ Dockerfile updated to avoid root user.")
-    else:
-        logging.info("→ No Dockerfile changes needed.")
+    return updated
+
+def update_dockerfile(vulns):
+    """Update Dockerfile base image based on recommendations"""
+    if not os.path.exists('Dockerfile') or not vulns:
+        return False
+
+    # Find base image update recommendations
+    base_image_updates = []
+    for vuln in vulns:
+        if vuln.get('ID') == 'DS002' and 'update to' in vuln.get('Resolution', ''):
+            base_image_updates.append(vuln)
+
+    if not base_image_updates:
+        return False
+
+    # Get highest recommended version
+    best_update = max(base_image_updates, 
+                     key=lambda x: x['CauseMetadata']['StartLine'])
+    new_image = best_update['Resolution'].split()[-1]
+
+    with open('Dockerfile', 'r') as f:
+        lines = f.readlines()
+
+    # Update base image in Dockerfile
+    updated = False
+    for i, line in enumerate(lines):
+        if line.strip().startswith('FROM'):
+            parts = line.split()
+            if len(parts) > 1:
+                lines[i] = f"FROM {new_image}\n"
+                updated = True
+                break
+
+    if updated:
+        with open('Dockerfile', 'w') as f:
+            f.writelines(lines)
+    return updated
+
+def generate_report(go_fixes, docker_fix, unfixed):
+    """Generate markdown remediation report"""
+    report = "# Vulnerability Remediation Report\n\n"
     
-    return modified
-
-def stage_and_commit_changes():
-    subprocess.run(["git", "add", "."], check=True)
-    subprocess.run(["git", "commit", "-m", "Applied vulnerability remediations"], check=True)
-    logging.info("✓ Git commit created for remediations.")
-
-def main(go_report, dockerfile_report, image_report):
-    go_data = load_report(go_report)
-    df_data = load_report(dockerfile_report)
-
-    go_vulns = collect_vulns(go_data)
-    df_vulns = collect_vulns(df_data)
-
-    logging.info(f"\nProcessing component: {COMPONENT_DIR}")
-    logging.info(f"  Go-mod issues:     {len(go_vulns)}")
-    logging.info(f"  Dockerfile issues: {len(df_vulns)}")
-
-    fixed_any = False
-    fixed_any |= remediate_go_mod(go_vulns)
-    fixed_any |= remediate_dockerfile(df_vulns)
-
-    if fixed_any:
-        try:
-            stage_and_commit_changes()
-        except subprocess.CalledProcessError as e:
-            logging.error(f"✗ Git commit failed: {e}")
+    if go_fixes or docker_fix:
+        report += "## ✅ Fixed Vulnerabilities\n\n"
+        if docker_fix:
+            report += f"### Docker Base Image Updated\n- **New Image**: {docker_fix}\n\n"
+        if go_fixes:
+            report += "### Go Package Updates\n| Package | Fixed Version |\n| ------- | ------------- |\n"
+            for pkg, ver in go_fixes.items():
+                report += f"| {pkg} | {ver} |\n"
+            report += "\n"
+    
+    if unfixed:
+        report += "## ⚠️ Unfixed Vulnerabilities (Require Manual Review)\n"
+        report += "| Vulnerability ID | Package | Severity |\n"
+        report += "| ----------------- | ------- | -------- |\n"
+        for vuln in unfixed:
+            report += f"| {vuln['VulnerabilityID']} | {vuln['PkgName']} | {vuln['Severity']} |\n"
     else:
-        logging.info("→ No remediations applied. No commit needed.")
+        report += "\nAll vulnerabilities with available fixes were remediated!\n"
+    
+    with open('remediation-report.md', 'w') as f:
+        f.write(report)
 
-    logging.info("\n--- PoC Remediation Complete ---")
+def main():
+    args = parse_args()
+    go_vulns = []
+    docker_vulns = []
+    unfixed = []
+    docker_fix = None
+    go_fixes = {}
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser("Trivy Remediation Script")
-    parser.add_argument("--go-report", required=True)
-    parser.add_argument("--dockerfile-report", required=True)
-    parser.add_argument("--image-report", required=True)
-    args = parser.parse_args()
-    main(args.go_report, args.dockerfile_report, args.image_report)
+    # Process Go vulnerabilities
+    if args.go_report and os.path.exists(args.go_report):
+        with open(args.go_report) as f:
+            data = json.load(f)
+        for result in data.get('Results', []):
+            if result.get('Target') == 'go.mod':
+                for vuln in result.get('Vulnerabilities', []):
+                    if vuln.get('FixedVersion'):
+                        go_vulns.append(vuln)
+                    else:
+                        unfixed.append(vuln)
+
+    # Process Docker vulnerabilities
+    if args.docker_report and os.path.exists(args.docker_report):
+        with open(args.docker_report) as f:
+            data = json.load(f)
+        for result in data.get('Results', []):
+            if result.get('Target') == 'Dockerfile':
+                docker_vulns = result.get('Misconfigurations', [])
+
+    # Process Image vulnerabilities
+    if args.image_report and os.path.exists(args.image_report):
+        with open(args.image_report) as f:
+            data = json.load(f)
+        for result in data.get('Results', []):
+            if result.get('Class') == 'os-pkgs':
+                for vuln in result.get('Vulnerabilities', []):
+                    if not vuln.get('FixedVersion'):
+                        unfixed.append(vuln)
+
+    # Apply remediations
+    go_updated = update_go_mod(go_vulns)
+    docker_updated = update_dockerfile(docker_vulns)
+
+    # Capture fixes for report
+    if docker_updated:
+        with open('Dockerfile') as f:
+            for line in f:
+                if line.startswith('FROM'):
+                    docker_fix = line.split()[1]
+                    break
+    
+    if go_updated:
+        for vuln in go_vulns:
+            go_fixes[vuln['PkgName']] = vuln['FixedVersion']
+
+    # Generate report
+    generate_report(go_fixes, docker_fix, unfixed)
+
+    # Exit code for commit action
+    if go_updated or docker_updated:
+        print("Changes made. Triggering commit...")
+    else:
+        print("No vulnerabilities required automated fixes")
+
+if __name__ == '__main__':
+    main()
