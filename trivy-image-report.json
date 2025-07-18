@@ -1,33 +1,33 @@
 {
   "SchemaVersion": 2,
-  "CreatedAt": "2025-07-18T12:37:42.699409468Z",
+  "CreatedAt": "2025-07-18T12:45:32.6100391Z",
   "ArtifactName": "myapp:latest",
   "ArtifactType": "container_image",
   "Metadata": {
-    "Size": 653198336,
+    "Size": 698453504,
     "OS": {
       "Family": "alpine",
       "Name": "3.19.1"
     },
-    "ImageID": "sha256:1efa9eda19f3044bc295d1fe1abff8014f54e76a050c59d05b0542ae1d62a825",
+    "ImageID": "sha256:03b33383e1311d3df0f21efe89b44e560e286a61ef32d8f122630aa127445add",
     "DiffIDs": [
       "sha256:d4fc045c9e3a848011de66f34b81f052d4f2c15a17bb196d637e526349601820",
       "sha256:6dd5a23a5acc1232ed44f95f12ba5332e70413fa1a6d5b72394383b30851c566",
       "sha256:21abefad2f2cf21811a303cb4fd90adf416cd70639362c2219675f340055a548",
       "sha256:888d9d1b44354eeb36be240edfc62c374116d8619c07391d1237a1de655db469",
       "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
-      "sha256:30dd53179019547ae1d21ee0f78518340152c0219ac8aff0856f98a61143f450",
-      "sha256:27113a89798ea00f8a58811580f52752d1edd46c5a8c4025d603279a4399a8b6",
-      "sha256:86963d8a9fac5d6bb89e4e1a6d17d6a0aea17d1372cc40f41b27bc9f41aabc8f",
-      "sha256:71839250a9894b56ea4943e0fe9ea6a84533a278aad9649e996385662c35be70",
-      "sha256:49c15474ca7b86dc42e1099193d00c99a2687bd86fea116f68ff9d3487c3ea24"
+      "sha256:e82c0f580a8cf42141117d91312a0e8889f5370669701e9827016d176045c545",
+      "sha256:0cc226c1f1e810bb5b14c3a6502303d3dc17ed602809404ad387ceabf86b3c83",
+      "sha256:c0b581ebbf6fe147bd649abbcc299107d6806f9ed502d0137ed0a4cd2e30f348",
+      "sha256:32885014bc5bed71e5b3dfbc1020e1c6a9ae16e852626329adca9eb0cac77b30",
+      "sha256:d002d66144dba1c7ecee5d8c9c7585ba4b3b3190ae386965dc58237f7679abac"
     ],
     "RepoTags": [
       "myapp:latest"
     ],
     "ImageConfig": {
       "architecture": "amd64",
-      "created": "2025-07-18T12:36:53.81843552Z",
+      "created": "2025-07-18T12:44:42.179152276Z",
       "history": [
         {
           "created": "2024-01-27T00:30:48Z",
@@ -83,38 +83,38 @@
           "comment": "buildkit.dockerfile.v0"
         },
         {
-          "created": "2025-07-18T12:36:50Z",
+          "created": "2025-07-18T12:44:39Z",
           "created_by": "RUN /bin/sh -c apk add --no-cache git # buildkit",
           "comment": "buildkit.dockerfile.v0"
         },
         {
-          "created": "2025-07-18T12:36:50Z",
+          "created": "2025-07-18T12:44:39Z",
           "created_by": "WORKDIR /app",
           "comment": "buildkit.dockerfile.v0"
         },
         {
-          "created": "2025-07-18T12:36:50Z",
+          "created": "2025-07-18T12:44:39Z",
           "created_by": "COPY go.mod go.sum ./ # buildkit",
           "comment": "buildkit.dockerfile.v0"
         },
         {
-          "created": "2025-07-18T12:36:53Z",
+          "created": "2025-07-18T12:44:41Z",
           "created_by": "RUN /bin/sh -c go mod download # buildkit",
           "comment": "buildkit.dockerfile.v0"
         },
         {
-          "created": "2025-07-18T12:36:53Z",
+          "created": "2025-07-18T12:44:42Z",
           "created_by": "COPY . . # buildkit",
           "comment": "buildkit.dockerfile.v0"
         },
         {
-          "created": "2025-07-18T12:36:53Z",
+          "created": "2025-07-18T12:44:42Z",
           "created_by": "EXPOSE map[8080/tcp:{}]",
           "comment": "buildkit.dockerfile.v0",
           "empty_layer": true
         },
         {
-          "created": "2025-07-18T12:36:53Z",
+          "created": "2025-07-18T12:44:42Z",
           "created_by": "CMD [\"go\" \"run\" \"main.go\"]",
           "comment": "buildkit.dockerfile.v0",
           "empty_layer": true
@@ -129,11 +129,11 @@
           "sha256:21abefad2f2cf21811a303cb4fd90adf416cd70639362c2219675f340055a548",
           "sha256:888d9d1b44354eeb36be240edfc62c374116d8619c07391d1237a1de655db469",
           "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
-          "sha256:30dd53179019547ae1d21ee0f78518340152c0219ac8aff0856f98a61143f450",
-          "sha256:27113a89798ea00f8a58811580f52752d1edd46c5a8c4025d603279a4399a8b6",
-          "sha256:86963d8a9fac5d6bb89e4e1a6d17d6a0aea17d1372cc40f41b27bc9f41aabc8f",
-          "sha256:71839250a9894b56ea4943e0fe9ea6a84533a278aad9649e996385662c35be70",
-          "sha256:49c15474ca7b86dc42e1099193d00c99a2687bd86fea116f68ff9d3487c3ea24"
+          "sha256:e82c0f580a8cf42141117d91312a0e8889f5370669701e9827016d176045c545",
+          "sha256:0cc226c1f1e810bb5b14c3a6502303d3dc17ed602809404ad387ceabf86b3c83",
+          "sha256:c0b581ebbf6fe147bd649abbcc299107d6806f9ed502d0137ed0a4cd2e30f348",
+          "sha256:32885014bc5bed71e5b3dfbc1020e1c6a9ae16e852626329adca9eb0cac77b30",
+          "sha256:d002d66144dba1c7ecee5d8c9c7585ba4b3b3190ae386965dc58237f7679abac"
         ]
       },
       "config": {
@@ -178,23 +178,23 @@
       },
       {
         "Size": 10837504,
-        "DiffID": "sha256:30dd53179019547ae1d21ee0f78518340152c0219ac8aff0856f98a61143f450"
+        "DiffID": "sha256:e82c0f580a8cf42141117d91312a0e8889f5370669701e9827016d176045c545"
       },
       {
         "Size": 1536,
-        "DiffID": "sha256:27113a89798ea00f8a58811580f52752d1edd46c5a8c4025d603279a4399a8b6"
+        "DiffID": "sha256:0cc226c1f1e810bb5b14c3a6502303d3dc17ed602809404ad387ceabf86b3c83"
       },
       {
         "Size": 12288,
-        "DiffID": "sha256:86963d8a9fac5d6bb89e4e1a6d17d6a0aea17d1372cc40f41b27bc9f41aabc8f"
+        "DiffID": "sha256:c0b581ebbf6fe147bd649abbcc299107d6806f9ed502d0137ed0a4cd2e30f348"
       },
       {
-        "Size": 215310848,
-        "DiffID": "sha256:71839250a9894b56ea4943e0fe9ea6a84533a278aad9649e996385662c35be70"
+        "Size": 214945280,
+        "DiffID": "sha256:32885014bc5bed71e5b3dfbc1020e1c6a9ae16e852626329adca9eb0cac77b30"
       },
       {
-        "Size": 185724416,
-        "DiffID": "sha256:49c15474ca7b86dc42e1099193d00c99a2687bd86fea116f68ff9d3487c3ea24"
+        "Size": 231345152,
+        "DiffID": "sha256:d002d66144dba1c7ecee5d8c9c7585ba4b3b3190ae386965dc58237f7679abac"
       }
     ]
   },
