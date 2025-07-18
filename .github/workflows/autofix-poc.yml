@@ -1,3 +1,4 @@
+---
 name: PoC Automated Vulnerability Remediation
 permissions:
   contents: write         # to push branches/commits
@@ -28,61 +29,63 @@ jobs:
       - name: Install Python dependencies
         run: pip install PyYAML requests # requests for Slack, PyYAML if needed for future YAML manipulation
 
-      - name: Install Trivy
+      - name: Install Trivy and GitHub CLI
         run: |
-          sudo apt-get install wget apt-transport-https gnupg lsb-release
+          # Install Trivy
+          sudo apt-get update
+          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
           wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
           echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
           sudo apt-get update
-          sudo apt-get install trivy
+          sudo apt-get install -y trivy
+          # GitHub CLI is usually pre-installed on GitHub-hosted runners, but this ensures it.
+          type gh >/dev/null 2>&1 || (curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
+          && sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
+          && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+          && sudo apt-get update \
+          && sudo apt-get install -y gh)
+
+      - name: Create Trivy reports directory
+        run: mkdir -p trivy-reports
 
       - name: Build Docker Image (Initial)
         id: build_initial_image
         run: |
           docker build -t go-app-vulnerable:latest ./go-app-vulnerable/
-        # working-directory: ./go-app-vulnerable/ # Ensure context is correct
       
       - name: Initial Trivy Scan - All Vulnerability Types
         id: initial_scan
         run: |
           echo "Running comprehensive Trivy scan..."
-          docker build -t go-app-vulnerable:latest go-app-vulnerable/ # Build image first
-          cd go-app-vulnerable/ # Change directory for subsequent scans
-          trivy fs --format json --output ../trivy-go-initial.json go.mod
-          trivy config --format json --output ../trivy-dockerfile-initial.json Dockerfile
-          trivy image --format json --output ../trivy-image-initial.json go-app-vulnerable:latest
+          # Ensure Trivy scans are run from the repository root
+          trivy fs --format json --output trivy-reports/trivy-go-initial.json go-app-vulnerable/go.mod
+          trivy config --format json --output trivy-reports/trivy-dockerfile-initial.json go-app-vulnerable/Dockerfile
+          trivy image --format json --output trivy-reports/trivy-image-initial.json go-app-vulnerable:latest
           
-          # IMPORTANT: For a proper SARIF upload, you should convert the Trivy JSON outputs
-          # into a single SARIF file that actually contains results, not just a dummy.
-          # For a PoC, a dummy file can trigger the action, but a real one is better.
-          # If Trivy can output SARIF directly, use that.
-          # trivy fs --format sarif --output ../trivy-fs-initial.sarif .
-          # trivy image --format sarif --output ../trivy-image-initial.sarif go-app-vulnerable:latest
-          # (Then combine them if needed, or upload multiple SARIFs)
+          # --- IMPORTANT: For a proper SARIF upload ---
+          # Convert Trivy JSON outputs to SARIF if Trivy doesn't directly support combined SARIF for all types.
+          # Or, run Trivy with --format sarif for each type if applicable and combine them.
+          # For this PoC, we still use a dummy SARIF for the initial upload.
+          echo '{"$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json", "version": "2.1.0", "runs": [{"tool": {"driver": {"name": "Trivy"}}, "results": []}]}' > trivy-reports/trivy-dummy-results.sarif
+        continue-on-error: true # Allow subsequent steps to run even if scan fails
 
-          # For the purpose of getting THIS ERROR FIXED, we'll keep the dummy,
-          # but you should aim to generate real SARIF later.
-          echo '{"$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json", "version": "2.1.0", "runs": [{"tool": {"driver": {"name": "Trivy"}}, "results": []}]}' > ../trivy-dummy-results.sarif
-        continue-on-error: true
-     
       - name: Upload Initial Scan SARIF results to GitHub Code Scanning
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: trivy-dummy-results.sarif # This should eventually be a real SARIF file
+          sarif_file: trivy-reports/trivy-dummy-results.sarif # This should eventually be a real SARIF file
         if: always() # Run even if previous steps fail
-
         
       - name: Run Automated Remediation Script (Python)
         id: remediation_script_execution
         env:
-          GITHUB_TOKEN:     ${{ secrets.GITHUB_TOKEN }}
-          # SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }} # Uncomment if you configure Slack
         run: |
           python "$GITHUB_WORKSPACE/.github/scripts/remediate_pipeline_poc.py" \
-            --go-report   "$GITHUB_WORKSPACE/go-app-vulnerable/trivy-go-initial.json" \
-            --dockerfile-report "$GITHUB_WORKSPACE/go-app-vulnerable/trivy-dockerfile-initial.json" \
-            --image-report      "$GITHUB_WORKSPACE/go-app-vulnerable/trivy-image-initial.json"
-        continue-on-error: true
+            --go-report "$GITHUB_WORKSPACE/trivy-reports/trivy-go-initial.json" \
+            --dockerfile-report "$GITHUB_WORKSPACE/trivy-reports/trivy-dockerfile-initial.json" \
+            --image-report "$GITHUB_WORKSPACE/trivy-reports/trivy-image-initial.json"
+        continue-on-error: true # Allow subsequent steps to run
 
       - name: Check for changes and Create Pull Request
         id: create_pr
@@ -95,7 +98,7 @@ jobs:
             echo "changes_made=false" >> $GITHUB_OUTPUT
           else
             echo "::notice::Changes detected. Creating PR…"
-            CURRENT_BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
+            CURRENT_BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}}"
             REMEDIATION_BRANCH="autofix/vuln-$(date +%Y%m%d%H%M%S)-${CURRENT_BRANCH}"
 
             git config user.name "GitHub Actions Automation"
@@ -107,59 +110,63 @@ jobs:
             git push origin "$REMEDIATION_BRANCH"
 
             PR_BODY_SUMMARY=$(cat .github/autofix_summary_poc.txt || echo "Automated vulnerability remediation completed.")
-            PR_URL=$(gh pr create \
+            
+            # Create PR and capture output to extract URL
+            PR_OUTPUT=$(gh pr create \
               --base "$CURRENT_BRANCH" \
               --head "$REMEDIATION_BRANCH" \
               --title "feat(security): Automated Go & Docker vulnerability fixes" \
               --body "This PR was automatically generated by the vulnerability-autofix-poc workflow.\n\n### Remediation Summary:\n${PR_BODY_SUMMARY}" \
-              --json url -q .url \
-              --reviewer ${{ github.actor }} 
+              --reviewer ${{ github.actor }} \
+              --assignee ${{ github.actor }} # Self-assign the PR
             )
+            PR_URL=$(echo "$PR_OUTPUT" | grep 'https://github.com/' | head -n 1) # Extract URL from output
+
             echo "::notice::Pull request created: $PR_URL"
             echo "pr_url=$PR_URL"      >> $GITHUB_OUTPUT
             echo "changes_made=true"  >> $GITHUB_OUTPUT
           fi
-        continue-on-error: true
+        continue-on-error: true # Allow subsequent steps even if PR creation fails
 
       - name: Build Docker Image (Post-Remediation)
         id: build_post_remediation_image
         if: steps.create_pr.outputs.changes_made == 'true'
         run: |
           docker build -t go-app-vulnerable:autofix-latest go-app-vulnerable/
-        working-directory: ./go-app-vulnerable/
-      
+        # Removed working-directory: ./go-app-vulnerable/ as docker build command implies context
+
       - name: Re-scan after Remediation (for validation)
         id: post_remediation_scan
         if: steps.create_pr.outputs.changes_made == 'true'
         run: |
           echo "Re-scanning the potentially fixed code/image..."
           # Re-scan updated Go module (filesystem)
-          trivy fs --format json --output ../trivy-go-recheck.json go.mod
+          trivy fs --format json --output trivy-reports/trivy-go-recheck.json go-app-vulnerable/go.mod
           # Re-scan Dockerfile (config)
-          trivy config --format json --output ../trivy-dockerfile-recheck.json Dockerfile
+          trivy config --format json --output trivy-reports/trivy-dockerfile-recheck.json go-app-vulnerable/Dockerfile
           # Re-scan the NEWLY BUILT Docker Image
-          trivy image --format json --output ../trivy-image-recheck.json go-app-vulnerable:autofix-latest
-        working-directory: ./go-app-vulnerable/
+          trivy image --format json --output trivy-reports/trivy-image-recheck.json go-app-vulnerable:autofix-latest
         continue-on-error: true
         
       - name: Upload Post-Remediation SARIF results to GitHub Code Scanning
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: trivy-dummy-results.sarif # Use actual SARIF converter here
+          sarif_file: trivy-reports/trivy-dummy-results.sarif # Use actual SARIF converter here
         if: always() && steps.create_pr.outputs.changes_made == 'true'
-      # - name: Notify Slack on Remediation Attempt (if Slack configured)
-      #   if: success() || failure() # Trigger on success or failure
-      #   uses: slackapi/slack-github-action@v1.24.0
-      #   with:
-      #     slack-message: |
-      #       *PoC: Automated Vulnerability Remediation Attempt:*
-      #       Repository: ${{ github.repository }}
-      #       Branch: `${{ github.ref_name }}`
-      #       Workflow: `${{ github.workflow }}`
-      #       Status: `${{ job.status }}`
-      #       ${{ steps.create_pr.outputs.changes_made == 'true' && format('Pull Request: {0}', steps.create_pr.outputs.pr_url) || 'No changes made / No PR created.' }}
-      #       Check workflow run for details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-      #   env:
-      #     SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }} # Requires this secret
-      #     SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
-      #   if: success() || failure() && env.SLACK_WEBHOOK_URL # Only run if Slack URL is set
+      
+      - name: Notify Slack on Remediation Attempt (if Slack configured)
+        if: always() # Trigger on success, failure, or cancelled
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          slack-message: |
+            *PoC: Automated Vulnerability Remediation Attempt:*
+            Repository: ${{ github.repository }}
+            Branch: `${{ github.ref_name }}`
+            Workflow: `${{ github.workflow }}`
+            Status: `${{ job.status }}`
+            ${{ steps.create_pr.outputs.changes_made == 'true' && format('Pull Request: {0}', steps.create_pr.outputs.pr_url) || 'No changes made / No PR created.' }}
+            Check workflow run for details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }} # Requires this secret
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+        if: success() || failure() && env.SLACK_WEBHOOK_URL # Only run if Slack URL is set
