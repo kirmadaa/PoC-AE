@@ -1,33 +1,33 @@
 {
   "SchemaVersion": 2,
-  "CreatedAt": "2025-07-18T13:18:02.92568163Z",
+  "CreatedAt": "2025-07-18T13:23:45.427027618Z",
   "ArtifactName": "myapp:latest",
   "ArtifactType": "container_image",
   "Metadata": {
-    "Size": 835355648,
+    "Size": 880973312,
     "OS": {
       "Family": "alpine",
       "Name": "3.19.1"
     },
-    "ImageID": "sha256:86700c17452ec76f546e63864a9c95e434b8ea5e7a75f3d8149c9f4e2da796f5",
+    "ImageID": "sha256:344330b66156046d0982d5defd07a2896d40960d8ed6d3c5faf72687d9f1e4d5",
     "DiffIDs": [
       "sha256:d4fc045c9e3a848011de66f34b81f052d4f2c15a17bb196d637e526349601820",
       "sha256:6dd5a23a5acc1232ed44f95f12ba5332e70413fa1a6d5b72394383b30851c566",
       "sha256:21abefad2f2cf21811a303cb4fd90adf416cd70639362c2219675f340055a548",
       "sha256:888d9d1b44354eeb36be240edfc62c374116d8619c07391d1237a1de655db469",
       "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
-      "sha256:6a145628c75d1965f3db76a95ccaa796446661972ac0b80bd3a85d2fb0c9ed88",
-      "sha256:22fa5754726853b6ff85064dbd7187a1316a9d0e96080779e8a60b1aef397467",
-      "sha256:3b659fcecb1a177aa8918637e83fc37f2b6cb35e56c4db44fe52ce52679f5c86",
-      "sha256:41fa06a7921bb43c06bf150dcacd08b42c7bb917b5360b9526c159e7dc9fc42e",
-      "sha256:d5e7fb3dd2a0c2732f3c9972ca02ddc5047449e06532639df3b364115c380e74"
+      "sha256:f636ffbbfbbe03bb1e1ca91f3e20b2967d05507f8486aac43c0a834f9f44b45e",
+      "sha256:28d68c765340ab954bdcf56c33061342dffef83081039d659283deeae6a70299",
+      "sha256:65058d5d51165dd424611eae4d405f8fd500b1df93bffa79932b74db5e3b428c",
+      "sha256:76029107fabfc7840c3c5056a992f6069a3782e11327be5a27725bd1e293e1f5",
+      "sha256:ae1893528ca984aa7b36721861033a299d7a25e198698f06fdf4441d3f1795cc"
     ],
     "RepoTags": [
       "myapp:latest"
     ],
     "ImageConfig": {
       "architecture": "amd64",
-      "created": "2025-07-18T13:17:16.179078776Z",
+      "created": "2025-07-18T13:22:54.56025136Z",
       "history": [
         {
           "created": "2024-01-27T00:30:48Z",
@@ -83,38 +83,38 @@
           "comment": "buildkit.dockerfile.v0"
         },
         {
-          "created": "2025-07-18T13:17:13Z",
+          "created": "2025-07-18T13:22:51Z",
           "created_by": "RUN /bin/sh -c apk add --no-cache git # buildkit",
           "comment": "buildkit.dockerfile.v0"
         },
         {
-          "created": "2025-07-18T13:17:13Z",
+          "created": "2025-07-18T13:22:51Z",
           "created_by": "WORKDIR /app",
           "comment": "buildkit.dockerfile.v0"
         },
         {
-          "created": "2025-07-18T13:17:13Z",
+          "created": "2025-07-18T13:22:51Z",
           "created_by": "COPY go.mod go.sum ./ # buildkit",
           "comment": "buildkit.dockerfile.v0"
         },
         {
-          "created": "2025-07-18T13:17:15Z",
+          "created": "2025-07-18T13:22:53Z",
           "created_by": "RUN /bin/sh -c go mod download # buildkit",
           "comment": "buildkit.dockerfile.v0"
         },
         {
-          "created": "2025-07-18T13:17:16Z",
+          "created": "2025-07-18T13:22:54Z",
           "created_by": "COPY . . # buildkit",
           "comment": "buildkit.dockerfile.v0"
         },
         {
-          "created": "2025-07-18T13:17:16Z",
+          "created": "2025-07-18T13:22:54Z",
           "created_by": "EXPOSE map[8080/tcp:{}]",
           "comment": "buildkit.dockerfile.v0",
           "empty_layer": true
         },
         {
-          "created": "2025-07-18T13:17:16Z",
+          "created": "2025-07-18T13:22:54Z",
           "created_by": "CMD [\"go\" \"run\" \"main.go\"]",
           "comment": "buildkit.dockerfile.v0",
           "empty_layer": true
@@ -129,11 +129,11 @@
           "sha256:21abefad2f2cf21811a303cb4fd90adf416cd70639362c2219675f340055a548",
           "sha256:888d9d1b44354eeb36be240edfc62c374116d8619c07391d1237a1de655db469",
           "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
-          "sha256:6a145628c75d1965f3db76a95ccaa796446661972ac0b80bd3a85d2fb0c9ed88",
-          "sha256:22fa5754726853b6ff85064dbd7187a1316a9d0e96080779e8a60b1aef397467",
-          "sha256:3b659fcecb1a177aa8918637e83fc37f2b6cb35e56c4db44fe52ce52679f5c86",
-          "sha256:41fa06a7921bb43c06bf150dcacd08b42c7bb917b5360b9526c159e7dc9fc42e",
-          "sha256:d5e7fb3dd2a0c2732f3c9972ca02ddc5047449e06532639df3b364115c380e74"
+          "sha256:f636ffbbfbbe03bb1e1ca91f3e20b2967d05507f8486aac43c0a834f9f44b45e",
+          "sha256:28d68c765340ab954bdcf56c33061342dffef83081039d659283deeae6a70299",
+          "sha256:65058d5d51165dd424611eae4d405f8fd500b1df93bffa79932b74db5e3b428c",
+          "sha256:76029107fabfc7840c3c5056a992f6069a3782e11327be5a27725bd1e293e1f5",
+          "sha256:ae1893528ca984aa7b36721861033a299d7a25e198698f06fdf4441d3f1795cc"
         ]
       },
       "config": {
@@ -178,23 +178,23 @@
       },
       {
         "Size": 10837504,
-        "DiffID": "sha256:6a145628c75d1965f3db76a95ccaa796446661972ac0b80bd3a85d2fb0c9ed88"
+        "DiffID": "sha256:f636ffbbfbbe03bb1e1ca91f3e20b2967d05507f8486aac43c0a834f9f44b45e"
       },
       {
         "Size": 1536,
-        "DiffID": "sha256:22fa5754726853b6ff85064dbd7187a1316a9d0e96080779e8a60b1aef397467"
+        "DiffID": "sha256:28d68c765340ab954bdcf56c33061342dffef83081039d659283deeae6a70299"
       },
       {
         "Size": 12288,
-        "DiffID": "sha256:3b659fcecb1a177aa8918637e83fc37f2b6cb35e56c4db44fe52ce52679f5c86"
+        "DiffID": "sha256:65058d5d51165dd424611eae4d405f8fd500b1df93bffa79932b74db5e3b428c"
       },
       {
         "Size": 214945280,
-        "DiffID": "sha256:41fa06a7921bb43c06bf150dcacd08b42c7bb917b5360b9526c159e7dc9fc42e"
+        "DiffID": "sha256:76029107fabfc7840c3c5056a992f6069a3782e11327be5a27725bd1e293e1f5"
       },
       {
-        "Size": 368247296,
-        "DiffID": "sha256:d5e7fb3dd2a0c2732f3c9972ca02ddc5047449e06532639df3b364115c380e74"
+        "Size": 413864960,
+        "DiffID": "sha256:ae1893528ca984aa7b36721861033a299d7a25e198698f06fdf4441d3f1795cc"
       }
     ]
   },
