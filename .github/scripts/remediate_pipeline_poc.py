@@ -8,15 +8,13 @@ import subprocess
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 
-
 def load_report(file_path):
     try:
         with open(file_path, 'r') as f:
             return json.load(f)
     except Exception as e:
         logging.error(f"Failed to load {file_path}: {e}")
-        return []
-
+        return {}
 
 def get_component_root(file_path):
     if file_path.endswith("go.mod") or file_path.endswith("Dockerfile"):
@@ -26,15 +24,21 @@ def get_component_root(file_path):
         return "."
     return "."
 
-
 def group_vulnerabilities_by_component(report):
     grouped = defaultdict(list)
-    for result in report.get("Results", []):
-        component_root = get_component_root(result.get("Target", ""))
-        for vuln in result.get("Vulnerabilities", []) + result.get("Misconfigurations", []):
+    results = report.get("Results", [])
+    if not isinstance(results, list):
+        return grouped
+
+    for result in results:
+        target = result.get("Target", "")
+        component_root = get_component_root(target)
+        vulns = result.get("Vulnerabilities", [])
+        misconfigs = result.get("Misconfigurations", [])
+
+        for vuln in vulns + misconfigs:
             grouped[component_root].append(vuln)
     return grouped
-
 
 def remediate_go_mod(component_root, vulns):
     logging.info(f"\n[Go Module Remediation] Component: {component_root}")
@@ -60,7 +64,6 @@ def remediate_go_mod(component_root, vulns):
     if fixed_any:
         subprocess.run(['go', 'mod', 'tidy'], cwd=component_root, check=False)
 
-
 def remediate_dockerfile(component_root, vulns):
     logging.info(f"\n[Dockerfile Remediation] Component: {component_root}")
     dockerfile_path = os.path.join(component_root, 'Dockerfile')
@@ -72,7 +75,7 @@ def remediate_dockerfile(component_root, vulns):
         lines = f.readlines()
 
     modified = False
-    if any(v['ID'] == 'DS001' for v in vulns):  # Checks if container runs as root
+    if any(v.get('ID') == 'DS001' for v in vulns):  # Checks if container runs as root
         if not any('useradd -u' in line or 'adduser' in line for line in lines):
             lines.insert(-1, 'RUN adduser -D appuser\n')
         if not any(line.startswith('USER ') for line in lines):
@@ -83,7 +86,6 @@ def remediate_dockerfile(component_root, vulns):
         with open(dockerfile_path, 'w') as f:
             f.writelines(lines)
         logging.info("Dockerfile updated with non-root user.")
-
 
 def main(go_report, dockerfile_report, image_report):
     all_reports = [load_report(go_report), load_report(dockerfile_report), load_report(image_report)]
@@ -104,7 +106,6 @@ def main(go_report, dockerfile_report, image_report):
         remediate_dockerfile(component_root, vulns)
 
     logging.info("\n--- PoC Remediation Complete ---")
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Trivy Remediation Script")
