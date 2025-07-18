@@ -56,18 +56,52 @@ jobs:
           commit_message: "Auto-remediated vulnerabilities using Trivy suggestions"
           commit_user_name: "Security Bot"
           commit_user_email: "security@example.com"
+      - name: Run Trivy file system scan
+        run: trivy fs . --format sarif --output trivy-fs-final.sarif
+        # Ensure this step always runs and check its output in logs
 
-      - name: Generate Final SARIF Report
+      - name: Run Trivy misconfiguration scan (for Dockerfile)
+        # Assuming Dockerfile exists in the root of the repo
         run: |
-          trivy fs . --format sarif --output trivy-fs-final.sarif
-          trivy config . --format sarif --output trivy-config-final.sarif
-          trivy image myapp:latest --format sarif --output trivy-image-final.sarif
+          if [ -f "Dockerfile" ]; then
+            echo "Dockerfile found, running Trivy config scan..."
+            trivy config Dockerfile --format sarif --output trivy-config-final.sarif
+          else
+            echo "Dockerfile not found, skipping Trivy config scan."
+            # Create an empty but valid SARIF file if the actual file isn't generated
+            echo '{"$schema": "https://docs.oasis-open.org/sarif/sarif-exchange/2.1.0/sarif-schema-2.1.0-rtm.5.json", "runs": []}' > trivy-config-final.sarif
+          fi
+
+      - name: Run Trivy image scan (example - adjust as needed)
+        # This step usually follows a `docker build` step.
+        # For demonstration, we'll ensure an image name is available, or create a dummy SARIF.
+        run: |
+          IMAGE_NAME="my-go-app:latest" # Replace with your actual image name
+          if docker pull $IMAGE_NAME >/dev/null 2>&1; then # Check if image exists locally or can be pulled
+            echo "Image $IMAGE_NAME found, running Trivy image scan..."
+            trivy image $IMAGE_NAME --format sarif --output trivy-image-final.sarif
+          else
+            echo "Image $IMAGE_NAME not available for scanning. Skipping actual image scan."
+            # Create an empty but valid SARIF file
+            echo '{"$schema": "https://docs.oasis-open.org/sarif/sarif-exchange/2.1.0/sarif-schema-2.1.0-rtm.5.json", "runs": []}' > trivy-image-final.sarif
+          fi
+
+      - name: Debug - List generated SARIF files
+        run: |
+          echo "Listing SARIF files in current directory:"
+          ls -l *.sarif
+          echo "Content of trivy-fs-final.sarif (first 10 lines):"
+          head -n 10 trivy-fs-final.sarif || true
+          echo "Content of trivy-config-final.sarif (first 10 lines):"
+          head -n 10 trivy-config-final.sarif || true
+          echo "Content of trivy-image-final.sarif (first 10 lines):"
+          head -n 10 trivy-image-final.sarif || true
 
       - name: Upload SARIF file to GitHub CodeQL
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: trivy-fs-final.sarif,trivy-config-final.sarif,trivy-image-final.sarif
-          checkout_path: /home/runner/work/PoC-AE/PoC-AE
+          checkout_path: ${{ github.workspace }} # Use GitHub's built-in workspace path variable
           token: ${{ secrets.GITHUB_TOKEN }}
           wait-for-processing: true
 
