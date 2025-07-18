@@ -1,0 +1,1 @@
+No automated remediation actions were taken for detected vulnerabilities.
