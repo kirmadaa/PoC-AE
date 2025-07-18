@@ -154,19 +154,19 @@ jobs:
           sarif_file: trivy-reports/trivy-dummy-results.sarif # Use actual SARIF converter here
         if: always() && steps.create_pr.outputs.changes_made == 'true'
       
-      - name: Notify Slack on Remediation Attempt (if Slack configured)
-        if: always() # Trigger on success, failure, or cancelled
-        uses: slackapi/slack-github-action@v1.24.0
-        with:
-          slack-message: |
-            *PoC: Automated Vulnerability Remediation Attempt:*
-            Repository: ${{ github.repository }}
-            Branch: `${{ github.ref_name }}`
-            Workflow: `${{ github.workflow }}`
-            Status: `${{ job.status }}`
-            ${{ steps.create_pr.outputs.changes_made == 'true' && format('Pull Request: {0}', steps.create_pr.outputs.pr_url) || 'No changes made / No PR created.' }}
-            Check workflow run for details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }} # Requires this secret
-          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
-        if: success() || failure() && env.SLACK_WEBHOOK_URL # Only run if Slack URL is set
+      # - name: Notify Slack on Remediation Attempt (if Slack configured)
+      #   if: always() # Trigger on success, failure, or cancelled
+      #   uses: slackapi/slack-github-action@v1.24.0
+      #   with:
+      #     slack-message: |
+      #       *PoC: Automated Vulnerability Remediation Attempt:*
+      #       Repository: ${{ github.repository }}
+      #       Branch: `${{ github.ref_name }}`
+      #       Workflow: `${{ github.workflow }}`
+      #       Status: `${{ job.status }}`
+      #       ${{ steps.create_pr.outputs.changes_made == 'true' && format('Pull Request: {0}', steps.create_pr.outputs.pr_url) || 'No changes made / No PR created.' }}
+      #       Check workflow run for details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      #   env:
+      #     SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }} # Requires this secret
+      #     SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+      #   if: success() || failure() && env.SLACK_WEBHOOK_URL # Only run if Slack URL is set
