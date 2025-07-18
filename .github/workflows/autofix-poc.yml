@@ -40,8 +40,8 @@ jobs:
       - name: Build Docker Image (Initial)
         id: build_initial_image
         run: |
-          docker build -t go-app-vulnerable:latest go-app-vulnerable/
-        working-directory: ./go-app-vulnerable/ # Ensure context is correct
+          docker build -t go-app-vulnerable:latest ./go-app-vulnerable/
+        # working-directory: ./go-app-vulnerable/ # Ensure context is correct
       
       - name: Initial Trivy Scan - All Vulnerability Types
         id: initial_scan
