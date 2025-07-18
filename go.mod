@@ -2,9 +2,9 @@ module github.com/your-org/your-repo/go-app-vulnerable
 
 go 1.22.0
 
-require github.com/gin-gonic/gin 1.9.1 // This version is likely vulnerable
-
+require 
 require (
+	github.com/gin-gonic/gin v1.6.1 
 	github.com/bytedance/sonic v1.9.1 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
