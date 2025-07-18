@@ -1,33 +1,33 @@
 {
   "SchemaVersion": 2,
-  "CreatedAt": "2025-07-18T12:34:17.277120844Z",
+  "CreatedAt": "2025-07-18T12:37:42.699409468Z",
   "ArtifactName": "myapp:latest",
   "ArtifactType": "container_image",
   "Metadata": {
-    "Size": 606986240,
+    "Size": 653198336,
     "OS": {
       "Family": "alpine",
       "Name": "3.19.1"
     },
-    "ImageID": "sha256:bc7cfc59d82e2593f6216c514320df253ef63639d823501a6589ee2fa212b7ba",
+    "ImageID": "sha256:1efa9eda19f3044bc295d1fe1abff8014f54e76a050c59d05b0542ae1d62a825",
     "DiffIDs": [
       "sha256:d4fc045c9e3a848011de66f34b81f052d4f2c15a17bb196d637e526349601820",
       "sha256:6dd5a23a5acc1232ed44f95f12ba5332e70413fa1a6d5b72394383b30851c566",
       "sha256:21abefad2f2cf21811a303cb4fd90adf416cd70639362c2219675f340055a548",
       "sha256:888d9d1b44354eeb36be240edfc62c374116d8619c07391d1237a1de655db469",
       "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
-      "sha256:225c2cbef0d66b77c3a07f88a2ca9a8b23b2fc26262dd067d032b904887ff329",
-      "sha256:e569cb99f604a395ece69f5361e48ed0ede283b8e5c8be30e5fe0418e902cfc8",
-      "sha256:8124b04891923919db2fd7ccf83e0588eb3a56d2f61628c231eb2309cb8a503f",
-      "sha256:76213ddd5e8bdcad190b7b6823fe1f5cefe34692c4ae7cc503b43e26a348bc00",
-      "sha256:28c0df4fb74026057c32f89ab12afc8f49115d4a0310f7a8b30109a315301697"
+      "sha256:30dd53179019547ae1d21ee0f78518340152c0219ac8aff0856f98a61143f450",
+      "sha256:27113a89798ea00f8a58811580f52752d1edd46c5a8c4025d603279a4399a8b6",
+      "sha256:86963d8a9fac5d6bb89e4e1a6d17d6a0aea17d1372cc40f41b27bc9f41aabc8f",
+      "sha256:71839250a9894b56ea4943e0fe9ea6a84533a278aad9649e996385662c35be70",
+      "sha256:49c15474ca7b86dc42e1099193d00c99a2687bd86fea116f68ff9d3487c3ea24"
     ],
     "RepoTags": [
       "myapp:latest"
     ],
     "ImageConfig": {
       "architecture": "amd64",
-      "created": "2025-07-18T12:33:29.801761246Z",
+      "created": "2025-07-18T12:36:53.81843552Z",
       "history": [
         {
           "created": "2024-01-27T00:30:48Z",
@@ -83,38 +83,38 @@
           "comment": "buildkit.dockerfile.v0"
         },
         {
-          "created": "2025-07-18T12:33:27Z",
+          "created": "2025-07-18T12:36:50Z",
           "created_by": "RUN /bin/sh -c apk add --no-cache git # buildkit",
           "comment": "buildkit.dockerfile.v0"
         },
         {
-          "created": "2025-07-18T12:33:27Z",
+          "created": "2025-07-18T12:36:50Z",
           "created_by": "WORKDIR /app",
           "comment": "buildkit.dockerfile.v0"
         },
         {
-          "created": "2025-07-18T12:33:27Z",
+          "created": "2025-07-18T12:36:50Z",
           "created_by": "COPY go.mod go.sum ./ # buildkit",
           "comment": "buildkit.dockerfile.v0"
         },
         {
-          "created": "2025-07-18T12:33:29Z",
+          "created": "2025-07-18T12:36:53Z",
           "created_by": "RUN /bin/sh -c go mod download # buildkit",
           "comment": "buildkit.dockerfile.v0"
         },
         {
-          "created": "2025-07-18T12:33:29Z",
+          "created": "2025-07-18T12:36:53Z",
           "created_by": "COPY . . # buildkit",
           "comment": "buildkit.dockerfile.v0"
         },
         {
-          "created": "2025-07-18T12:33:29Z",
+          "created": "2025-07-18T12:36:53Z",
           "created_by": "EXPOSE map[8080/tcp:{}]",
           "comment": "buildkit.dockerfile.v0",
           "empty_layer": true
         },
         {
-          "created": "2025-07-18T12:33:29Z",
+          "created": "2025-07-18T12:36:53Z",
           "created_by": "CMD [\"go\" \"run\" \"main.go\"]",
           "comment": "buildkit.dockerfile.v0",
           "empty_layer": true
@@ -129,11 +129,11 @@
           "sha256:21abefad2f2cf21811a303cb4fd90adf416cd70639362c2219675f340055a548",
           "sha256:888d9d1b44354eeb36be240edfc62c374116d8619c07391d1237a1de655db469",
           "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
-          "sha256:225c2cbef0d66b77c3a07f88a2ca9a8b23b2fc26262dd067d032b904887ff329",
-          "sha256:e569cb99f604a395ece69f5361e48ed0ede283b8e5c8be30e5fe0418e902cfc8",
-          "sha256:8124b04891923919db2fd7ccf83e0588eb3a56d2f61628c231eb2309cb8a503f",
-          "sha256:76213ddd5e8bdcad190b7b6823fe1f5cefe34692c4ae7cc503b43e26a348bc00",
-          "sha256:28c0df4fb74026057c32f89ab12afc8f49115d4a0310f7a8b30109a315301697"
+          "sha256:30dd53179019547ae1d21ee0f78518340152c0219ac8aff0856f98a61143f450",
+          "sha256:27113a89798ea00f8a58811580f52752d1edd46c5a8c4025d603279a4399a8b6",
+          "sha256:86963d8a9fac5d6bb89e4e1a6d17d6a0aea17d1372cc40f41b27bc9f41aabc8f",
+          "sha256:71839250a9894b56ea4943e0fe9ea6a84533a278aad9649e996385662c35be70",
+          "sha256:49c15474ca7b86dc42e1099193d00c99a2687bd86fea116f68ff9d3487c3ea24"
         ]
       },
       "config": {
@@ -178,23 +178,23 @@
       },
       {
         "Size": 10837504,
-        "DiffID": "sha256:225c2cbef0d66b77c3a07f88a2ca9a8b23b2fc26262dd067d032b904887ff329"
+        "DiffID": "sha256:30dd53179019547ae1d21ee0f78518340152c0219ac8aff0856f98a61143f450"
       },
       {
         "Size": 1536,
-        "DiffID": "sha256:e569cb99f604a395ece69f5361e48ed0ede283b8e5c8be30e5fe0418e902cfc8"
+        "DiffID": "sha256:27113a89798ea00f8a58811580f52752d1edd46c5a8c4025d603279a4399a8b6"
       },
       {
         "Size": 12288,
-        "DiffID": "sha256:8124b04891923919db2fd7ccf83e0588eb3a56d2f61628c231eb2309cb8a503f"
+        "DiffID": "sha256:86963d8a9fac5d6bb89e4e1a6d17d6a0aea17d1372cc40f41b27bc9f41aabc8f"
       },
       {
-        "Size": 214945280,
-        "DiffID": "sha256:76213ddd5e8bdcad190b7b6823fe1f5cefe34692c4ae7cc503b43e26a348bc00"
+        "Size": 215310848,
+        "DiffID": "sha256:71839250a9894b56ea4943e0fe9ea6a84533a278aad9649e996385662c35be70"
       },
       {
-        "Size": 139877888,
-        "DiffID": "sha256:28c0df4fb74026057c32f89ab12afc8f49115d4a0310f7a8b30109a315301697"
+        "Size": 185724416,
+        "DiffID": "sha256:49c15474ca7b86dc42e1099193d00c99a2687bd86fea116f68ff9d3487c3ea24"
       }
     ]
   },

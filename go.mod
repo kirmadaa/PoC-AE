@@ -2,7 +2,7 @@ module github.com/your-org/your-repo/go-app-vulnerable
 
 go 1.22.0
 
-require github.com/gin-gonic/gin v1.7.1 // This version is likely vulnerable
+require github.com/gin-gonic/gin 1.9.1 // This version is likely vulnerable
 
 require (
 	github.com/bytedance/sonic v1.9.1 // indirect
