@@ -63,13 +63,13 @@ jobs:
           trivy config . --format sarif --output trivy-config-final.sarif
           trivy image myapp:latest --format sarif --output trivy-image-final.sarif
 
-      - name: Upload Security Reports
+      - name: Upload SARIF file to GitHub CodeQL
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: |
-            trivy-fs-final.sarif
-            trivy-config-final.sarif
-            trivy-image-final.sarif
+          sarif_file: trivy-fs-final.sarif,trivy-config-final.sarif,trivy-image-final.sarif
+          checkout_path: /home/runner/work/PoC-AE/PoC-AE
+          token: ${{ secrets.GITHUB_TOKEN }}
+          wait-for-processing: true
 
       - name: Upload Remediation Report
         uses: actions/upload-artifact@v4
