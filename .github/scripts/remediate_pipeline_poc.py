@@ -18,11 +18,11 @@ def load_report(path):
         return {"Results": []}
 
 def collect_vulns(report):
-    vs = []
+    vulns = []
     for r in report.get("Results", []):
-        vs.extend(r.get("Vulnerabilities", []))
-        vs.extend(r.get("Misconfigurations", []))
-    return vs
+        vulns.extend(r.get("Vulnerabilities", []))
+        vulns.extend(r.get("Misconfigurations", []))
+    return vulns
 
 def remediate_go_mod(vulns):
     root = COMPONENT_DIR
@@ -31,7 +31,7 @@ def remediate_go_mod(vulns):
 
     if not os.path.exists(go_mod):
         logging.warning(f"go.mod not found at {go_mod}")
-        return
+        return False
 
     did_fix = False
     for v in vulns:
@@ -55,6 +55,8 @@ def remediate_go_mod(vulns):
     else:
         logging.info("→ No go.mod fixes applied.")
 
+    return did_fix
+
 def remediate_dockerfile(vulns):
     root = COMPONENT_DIR
     df = os.path.join(root, "Dockerfile")
@@ -62,29 +64,37 @@ def remediate_dockerfile(vulns):
 
     if not os.path.exists(df):
         logging.warning(f"Dockerfile not found at {df}")
-        return
+        return False
 
     lines = open(df, "r").readlines()
     modified = False
 
-    if any(v.get("ID") == "DS001" for v in vulns):
+    # Match vulnerabilities that say "runs as root" or related
+    if any("run as root" in v.get("Title", "").lower() for v in vulns):
         if not any("adduser" in l or "useradd" in l for l in lines):
             idx = next(
                 (i for i, l in enumerate(lines)
-                 if l.strip().upper().startswith(("CMD ", "ENTRYPOINT "))),
-                len(lines)-1
+                 if l.strip().upper().startswith(("CMD", "ENTRYPOINT"))),
+                len(lines) - 1
             )
             lines.insert(idx, "RUN adduser -D appuser\n")
-        if not any(l.strip().upper().startswith("USER ") for l in lines):
+        if not any(l.strip().upper().startswith("USER") for l in lines):
             lines.append("USER appuser\n")
         modified = True
 
     if modified:
         with open(df, "w") as f:
             f.writelines(lines)
-        logging.info("✓ Dockerfile updated with non‑root user.")
+        logging.info("✓ Dockerfile updated to avoid root user.")
     else:
         logging.info("→ No Dockerfile changes needed.")
+    
+    return modified
+
+def stage_and_commit_changes():
+    subprocess.run(["git", "add", "."], check=True)
+    subprocess.run(["git", "commit", "-m", "Applied vulnerability remediations"], check=True)
+    logging.info("✓ Git commit created for remediations.")
 
 def main(go_report, dockerfile_report, image_report):
     go_data = load_report(go_report)
@@ -94,16 +104,25 @@ def main(go_report, dockerfile_report, image_report):
     df_vulns = collect_vulns(df_data)
 
     logging.info(f"\nProcessing component: {COMPONENT_DIR}")
-    logging.info(f"  Go‑mod issues:     {len(go_vulns)}")
+    logging.info(f"  Go-mod issues:     {len(go_vulns)}")
     logging.info(f"  Dockerfile issues: {len(df_vulns)}")
 
-    remediate_go_mod(go_vulns)
-    remediate_dockerfile(df_vulns)
+    fixed_any = False
+    fixed_any |= remediate_go_mod(go_vulns)
+    fixed_any |= remediate_dockerfile(df_vulns)
+
+    if fixed_any:
+        try:
+            stage_and_commit_changes()
+        except subprocess.CalledProcessError as e:
+            logging.error(f"✗ Git commit failed: {e}")
+    else:
+        logging.info("→ No remediations applied. No commit needed.")
 
     logging.info("\n--- PoC Remediation Complete ---")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser("Trivy Remediation (hard‑coded path)")
+    parser = argparse.ArgumentParser("Trivy Remediation Script")
     parser.add_argument("--go-report", required=True)
     parser.add_argument("--dockerfile-report", required=True)
     parser.add_argument("--image-report", required=True)
