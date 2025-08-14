@@ -1,0 +1,13 @@
+{
+  "base_image_before": "alpine:3.20.7",
+  "base_image_after": "alpine:3.21",
+  "fixed_count": 1,
+  "remaining_count": 0,
+  "fixed_vulns": [
+    "CVE-2022-37434"
+  ],
+  "remaining_vulns": [],
+  "dockerfile_method": [
+    "base_update"
+  ]
+}

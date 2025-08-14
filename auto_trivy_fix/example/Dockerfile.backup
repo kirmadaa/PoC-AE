@@ -1,0 +1,13 @@
+# Old Alpine release (EOL, has many CVEs)
+FROM alpine:3.20.7
+
+# Install common packages (will have vulnerabilities in this old base)
+RUN apk add --no-cache bash curl openssl busybox
+
+# Simple script
+RUN echo -e '#!/bin/sh\n\
+echo "Hello, this is a vulnerable container!"\n\
+echo "Running outdated packages for testing."' > /vuln.sh && \
+    chmod +x /vuln.sh
+
+CMD ["/vuln.sh"]
