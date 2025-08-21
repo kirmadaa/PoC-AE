@@ -52,3 +52,21 @@ python auto_trivy_fix/dependency_fix.py
 ```
 
 The script will scan the `requirements.txt` file for vulnerabilities using `pip-audit` and automatically update the file with the fixed versions of the vulnerable packages.
+
+### JavaScript Projects
+
+The `js_dependency_fix.py` script can be used to automatically fix vulnerabilities in JavaScript projects that use `npm`.
+
+#### Usage
+
+You can run the script with the following environment variable:
+
+- `PROJECT_PATH`: The path to the JavaScript project directory (e.g., `js_example`).
+
+Example:
+```bash
+export PROJECT_PATH="my_js_project"
+python auto_trivy_fix/js_dependency_fix.py
+```
+
+The script will run `npm audit` to find vulnerabilities and then run `npm install` to update the vulnerable packages to the fixed versions. This will update the `package.json` and `package-lock.json` files.
